@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Reports Viewer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin-top: 50px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+        .card-header {
+            background-color: #4285F4;
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+        .form-select {
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #ced4da;
+        }
+        .btn-primary {
+            background-color: #4285F4;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 25px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #3367d6;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(66, 133, 244, 0.3);
+        }
+        .btn-primary:disabled {
+            background-color: #a2b9e2;
+            transform: none;
+            box-shadow: none;
+        }
+        .report-container {
+            margin-top: 30px;
+            display: none;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .spinner-border {
+            color: #4285F4;
+        }
+        .document-id {
+            font-weight: bold;
+            color: #4285F4;
+        }
+        .error-message {
+            color: #dc3545;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0"><i class="fas fa-comments me-2"></i>Datasets Viewer</h3>
+            </div>
+            <div class="card-body p-4">
+                <div class="mb-4">
+                    <label for="reportSelect" class="form-label">Select a dataset:</label>
+                    <select class="form-select" id="reportSelect">
+                        <option value="" selected disabled>Loading reports...</option>
+                    </select>
+                    <div class="error-message" id="selectError">
+                        <i class="fas fa-exclamation-circle me-2"></i>Please select a report before submitting
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-primary" id="viewButton" disabled>
+                        <i class="fas fa-eye me-2"></i>Submit Report
+                    </button>
+                </div>
+                
+                <div class="loading" id="loadingSpinner">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading report data...</p>
+                </div>
+                
+                <div class="report-container" id="reportContainer">
+                    <hr>
+                    <h4 class="mb-3">Report Details</h4>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Document ID:</strong>
+                                <span id="documentId" class="document-id"></span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Conversation ID:</strong>
+                                <span id="conversationId"></span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Username:</strong>
+                                <span id="username"></span>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Date:</strong>
+                                <span id="reportDate"></span>
+                            </div>
+                            <div>
+                                <strong>Conversation:</strong>
+                                <div id="conversationContent" class="mt-3"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Firebase configuration - replace with your own Firebase project details
+        const firebaseConfig = {
+            apiKey: "AIzaSyAMhNFpESlNQ7YyhfCcDHfEN-Pj19rgDdg",
+        authDomain: "chatcc-evaluation.firebaseapp.com",
+        projectId: "chatcc-evaluation",
+        storageBucket: "chatcc-evaluation.firebasestorage.app",
+        messagingSenderId: "917882510501",
+        appId: "1:917882510501:web:4e3de5349d557e44c4814c",
+        measurementId: "G-D3PKRM2GG8"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // DOM elements
+        const reportSelect = document.getElementById('reportSelect');
+        const viewButton = document.getElementById('viewButton');
+        const reportContainer = document.getElementById('reportContainer');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const documentId = document.getElementById('documentId');
+        const conversationId = document.getElementById('conversationId');
+        const username = document.getElementById('username');
+        const reportDate = document.getElementById('reportDate');
+        const conversationContent = document.getElementById('conversationContent');
+        const selectError = document.getElementById('selectError');
+        
+        // Load reports from Firestore
+        async function loadReports() {
+            try {
+                const snapshot = await db.collection("chat_reports").get();
+                
+                // Clear the loading option
+                reportSelect.innerHTML = '';
+                
+                // Add a default option
+                const defaultOption = document.createElement('option');
+                defaultOption.value = '';
+                defaultOption.textContent = 'Select a report...';
+                defaultOption.disabled = true;
+                defaultOption.selected = true;
+                reportSelect.appendChild(defaultOption);
+                
+                if (snapshot.empty) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No reports available';
+                    option.disabled = true;
+                    reportSelect.appendChild(option);
+                } else {
+                    // Add each report to the dropdown
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const option = document.createElement('option');
+                        option.value = doc.id;
+                        
+                        // Format the option text to show document ID
+                        option.textContent = `${doc.id}`;
+                        
+                        reportSelect.appendChild(option);
+                    });
+                    
+                    // Enable the view button
+                    viewButton.disabled = false;
+                }
+            } catch (error) {
+                console.error("Error loading reports:", error);
+                alert("Error loading reports. Please check the console for details.");
+            }
+        }
+        
+        // View the selected report
+        async function viewReport() {
+            const reportId = reportSelect.value;
+            
+            if (!reportId) {
+                // Show error message
+                selectError.style.display = 'block';
+                // Add shake animation to the select box
+                reportSelect.classList.add('is-invalid');
+                setTimeout(() => {
+                    reportSelect.classList.remove('is-invalid');
+                }, 1000);
+                return;
+            }
+            
+            // Hide error message if it was shown
+            selectError.style.display = 'none';
+        
+
+        }
+        
+        // Event listeners
+        viewButton.addEventListener('click', viewReport);
+        
+        // Enable/disable submit button based on selection
+ 
+        
+        // Load reports when the page loads
+        document.addEventListener('DOMContentLoaded', loadReports);
+    </script>
+</body>
+</html>
+

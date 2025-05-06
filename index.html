@@ -82,15 +82,23 @@
                 <div class="mb-4">
                     <label for="reportSelect" class="form-label">Select a dataset:</label>
                     <select class="form-select" id="reportSelect">
-                        <option value="" selected disabled>Loading reports...</option>
+                        <option value="" selected disabled>Loading datasets...</option>
                     </select>
+                    
+                    <!-- Dataset selection status text below dropdown -->
+                    <p class="mt-2 text-muted" id="selectedDatasetText">
+                        <i class="fas fa-info-circle me-1"></i>
+                        <span id="selectedDatasetStatus">No dataset selected</span>
+                    </p>
+                    
                     <div class="error-message" id="selectError">
-                        <i class="fas fa-exclamation-circle me-2"></i>Please select a report before submitting
+                        <i class="fas fa-exclamation-circle me-2"></i>Please select a dataset before submitting
                     </div>
                 </div>
+                
                 <div class="d-grid gap-2">
                     <button class="btn btn-primary" id="viewButton" disabled>
-                        <i class="fas fa-eye me-2"></i>Submit Report
+                        <i class="fas fa-eye me-2"></i>View Dataset
                     </button>
                 </div>
                 
@@ -103,12 +111,18 @@
                 
                 <div class="report-container" id="reportContainer">
                     <hr>
-                    <h4 class="mb-3">Report Details</h4>
+                    <h4 class="mb-3">
+                        Dataset Details: <span id="reportTitle" class="text-primary"></span>
+                    </h4>
                     <div class="card">
                         <div class="card-body">
                             <div class="mb-3">
+                                <strong>Dataset Name:</strong>
+                                <span id="datasetName" class="document-id"></span>
+                            </div>
+                            <div class="mb-3">
                                 <strong>Document ID:</strong>
-                                <span id="documentId" class="document-id"></span>
+                                <span id="documentId" class="text-secondary"></span>
                             </div>
                             <div class="mb-3">
                                 <strong>Conversation ID:</strong>
@@ -164,6 +178,8 @@
         const reportDate = document.getElementById('reportDate');
         const conversationContent = document.getElementById('conversationContent');
         const selectError = document.getElementById('selectError');
+        const selectedDatasetText = document.getElementById('selectedDatasetText');
+        const selectedDatasetStatus = document.getElementById('selectedDatasetStatus');
         
         // Load reports from Firestore
         async function loadReports() {
@@ -187,6 +203,9 @@
                     option.textContent = 'No reports available';
                     option.disabled = true;
                     reportSelect.appendChild(option);
+                    
+                    // Update the status text for empty results
+                    selectedDatasetStatus.textContent = 'No datasets available';
                 } else {
                     // Add each report to the dropdown
                     snapshot.forEach(doc => {
@@ -206,6 +225,10 @@
             } catch (error) {
                 console.error("Error loading reports:", error);
                 alert("Error loading reports. Please check the console for details.");
+                
+                // Update the status text for errors
+                selectedDatasetStatus.textContent = 'Error loading datasets';
+                selectedDatasetStatus.classList.add('text-danger');
             }
         }
         
@@ -234,11 +257,39 @@
         viewButton.addEventListener('click', viewReport);
         
         // Enable/disable submit button based on selection
- 
+        reportSelect.addEventListener('change', function() {
+            viewButton.disabled = !this.value;
+            
+            if (this.value) {
+                // Hide error message
+                selectError.style.display = 'none';
+                
+                // Update the selected dataset text
+                const selectedOption = this.options[this.selectedIndex];
+                selectedDatasetStatus.textContent = `${selectedOption.textContent}`;
+                selectedDatasetStatus.classList.remove('text-muted');
+                selectedDatasetStatus.classList.add('text-primary', 'fw-bold');
+            } else {
+                // Reset to "No dataset selected" if nothing is selected
+                selectedDatasetStatus.textContent = 'No dataset selected';
+                selectedDatasetStatus.classList.remove('text-primary', 'fw-bold');
+                selectedDatasetStatus.classList.add('text-muted');
+            }
+        });
         
         // Load reports when the page loads
         document.addEventListener('DOMContentLoaded', loadReports);
     </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
 

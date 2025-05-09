@@ -232,20 +232,7 @@
             }
         }
         
-        // View the selected report
-        async function viewReport() {
-            const reportId = reportSelect.value;
-            
-            if (!reportId) {
-                // Show error message
-                selectError.style.display = 'block';
-                // Add shake animation to the select box
-                reportSelect.classList.add('is-invalid');
-                setTimeout(() => {
-                    reportSelect.classList.remove('is-invalid');
-                }, 1000);
-                return;
-            }
+        
             
             // Hide error message if it was shown
             selectError.style.display = 'none';
@@ -253,8 +240,7 @@
 
         }
         
-        // Event listeners
-        viewButton.addEventListener('click', viewReport);
+        
         
         // Enable/disable submit button based on selection
         reportSelect.addEventListener('change', function() {

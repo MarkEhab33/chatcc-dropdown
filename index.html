@@ -91,6 +91,24 @@
                         <span id="selectedDatasetStatus">No dataset selected</span>
                     </p>
                     
+                    <!-- Add dataset name input and button -->
+                    <div class="mt-3 p-3 border rounded bg-light">
+                        <h5><i class="fas fa-tag me-2"></i>Dataset Name Management</h5>
+                        <div class="input-group mt-2">
+                            <input type="text" class="form-control" id="datasetNameInput" placeholder="Enter dataset name">
+                            <button class="btn btn-success" id="updateDatasetNameBtn">
+                                <i class="fas fa-save me-1"></i>Update Name
+                            </button>
+                        </div>
+                        <div class="mt-2 text-muted small">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Select a dataset first, then enter a name and click update
+                        </div>
+                        <div class="error-message mt-2" id="datasetNameError">
+                            <i class="fas fa-exclamation-circle me-2"></i>Please select a dataset and enter a name
+                        </div>
+                    </div>
+                    
                     <div class="error-message" id="selectError">
                         <i class="fas fa-exclamation-circle me-2"></i>Please select a dataset before submitting
                     </div>
@@ -180,7 +198,77 @@
         const selectError = document.getElementById('selectError');
         const selectedDatasetText = document.getElementById('selectedDatasetText');
         const selectedDatasetStatus = document.getElementById('selectedDatasetStatus');
-        
+        const datasetNameInput = document.getElementById('datasetNameInput');
+        const updateDatasetNameBtn = document.getElementById('updateDatasetNameBtn');
+        const datasetNameError = document.getElementById('datasetNameError');
+
+        // Function to update dataset name in Firebase
+        async function updateDatasetName() {
+            const reportId = reportSelect.value;
+            const newName = datasetNameInput.value.trim();
+            
+            // Validate inputs
+            if (!reportId || !newName) {
+                datasetNameError.style.display = 'block';
+                setTimeout(() => {
+                    datasetNameError.style.display = 'none';
+                }, 3000);
+                return;
+            }
+            
+            try {
+                // Show loading spinner
+                loadingSpinner.style.display = 'block';
+                
+                // Update the document in Firestore
+                await db.collection("chat_reports").doc(reportId).update({
+                    dataset_name: newName
+                });
+                
+                // Success feedback
+                datasetNameInput.value = '';
+                
+                // Show success message
+                const successMsg = document.createElement('div');
+                successMsg.className = 'alert alert-success mt-2';
+                successMsg.innerHTML = `<i class="fas fa-check-circle me-2"></i>Dataset name updated successfully!`;
+                document.querySelector('.input-group').after(successMsg);
+                
+                // Remove success message after 3 seconds
+                setTimeout(() => {
+                    successMsg.remove();
+                }, 3000);
+                
+                // Reload the reports to reflect the change
+                await loadReports();
+                
+                // Update the selected dataset status text
+                if (reportSelect.value) {
+                    const selectedOption = reportSelect.options[reportSelect.selectedIndex];
+                    selectedDatasetStatus.textContent = selectedOption.textContent;
+                    selectedDatasetStatus.classList.remove('text-muted');
+                    selectedDatasetStatus.classList.add('text-primary', 'fw-bold');
+                }
+                
+            } catch (error) {
+                console.error("Error updating dataset name:", error);
+                
+                // Show error message
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'alert alert-danger mt-2';
+                errorMsg.innerHTML = `<i class="fas fa-exclamation-triangle me-2"></i>Error updating dataset name: ${error.message}`;
+                document.querySelector('.input-group').after(errorMsg);
+                
+                // Remove error message after 5 seconds
+                setTimeout(() => {
+                    errorMsg.remove();
+                }, 5000);
+            } finally {
+                // Hide loading spinner
+                loadingSpinner.style.display = 'none';
+            }
+        }
+
         // Load reports from Firestore
         async function loadReports() {
             try {
@@ -213,8 +301,9 @@
                         const option = document.createElement('option');
                         option.value = doc.id;
                         
-                        // Format the option text to show document ID
-                        option.textContent = `${doc.id}`;
+                        // Format the option text to show document ID and dataset name if available
+                        const datasetName = data.dataset_name || 'Unnamed Dataset';
+                        option.textContent = `${datasetName} (${doc.id})`;
                         
                         reportSelect.appendChild(option);
                     });
@@ -255,7 +344,8 @@
         
         // Event listeners
         viewButton.addEventListener('click', viewReport);
-        
+        updateDatasetNameBtn.addEventListener('click', updateDatasetName);
+
         // Enable/disable submit button based on selection
         reportSelect.addEventListener('change', function() {
             viewButton.disabled = !this.value;
@@ -269,11 +359,33 @@
                 selectedDatasetStatus.textContent = `${selectedOption.textContent}`;
                 selectedDatasetStatus.classList.remove('text-muted');
                 selectedDatasetStatus.classList.add('text-primary', 'fw-bold');
+                
+                // Get the current dataset name if available
+                db.collection("chat_reports").doc(this.value).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            const data = doc.data();
+                            if (data.dataset_name) {
+                                datasetNameInput.value = data.dataset_name;
+                                datasetNameInput.placeholder = "Update dataset name";
+                            } else {
+                                datasetNameInput.value = "";
+                                datasetNameInput.placeholder = "Add dataset name";
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error getting document:", error);
+                    });
             } else {
                 // Reset to "No dataset selected" if nothing is selected
                 selectedDatasetStatus.textContent = 'No dataset selected';
                 selectedDatasetStatus.classList.remove('text-primary', 'fw-bold');
                 selectedDatasetStatus.classList.add('text-muted');
+                
+                // Clear the dataset name input
+                datasetNameInput.value = "";
+                datasetNameInput.placeholder = "Enter dataset name";
             }
         });
         
@@ -282,6 +394,8 @@
     </script>
 </body>
 </html>
+
+
 
 
 

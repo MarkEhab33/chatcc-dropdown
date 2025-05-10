@@ -95,32 +95,13 @@
                         <i class="fas fa-exclamation-circle me-2"></i>Please select a dataset before submitting
                     </div>
                 </div>
-
-                <!-- Submit Conversation Button -->
-                <div class="d-grid gap-2 mb-4">
+                
+                <div class="d-grid gap-2">
                     <button class="btn btn-primary" id="viewButton" disabled>
                         <i class="fas fa-eye me-2"></i>Submit Conversation
                     </button>
                 </div>
-
-                <!-- Add new dataset section -->
-                <div class="mt-4 p-3 border rounded bg-light">
-                    <h5><i class="fas fa-plus-circle me-2"></i>Create New Dataset</h5>
-                    <div class="input-group mt-2">
-                        <input type="text" class="form-control" id="newDatasetNameInput" placeholder="Enter new dataset name">
-                        <button class="btn btn-primary" id="createDatasetBtn">
-                            <i class="fas fa-plus me-1"></i>Create Dataset
-                        </button>
-                    </div>
-                    <div class="mt-2 text-muted small">
-                        <i class="fas fa-info-circle me-1"></i>
-                        Enter a unique name for your new dataset
-                    </div>
-                    <div class="error-message mt-2" id="newDatasetError">
-                        <i class="fas fa-exclamation-circle me-2"></i>Please enter a valid dataset name
-                    </div>
-                </div>
-
+                
                 <div class="loading" id="loadingSpinner">
                     <div class="spinner-border" role="status">
                         <span class="visually-hidden">Loading...</span>
@@ -199,94 +180,7 @@
         const selectError = document.getElementById('selectError');
         const selectedDatasetText = document.getElementById('selectedDatasetText');
         const selectedDatasetStatus = document.getElementById('selectedDatasetStatus');
-        const newDatasetNameInput = document.getElementById('newDatasetNameInput');
-        const createDatasetBtn = document.getElementById('createDatasetBtn');
-        const newDatasetError = document.getElementById('newDatasetError');
-
-        // Function to create a new dataset
-        async function createNewDataset() {
-            const datasetName = newDatasetNameInput.value.trim();
-            
-            // Validate input
-            if (!datasetName) {
-                newDatasetError.style.display = 'block';
-                newDatasetError.textContent = 'Please enter a dataset name';
-                setTimeout(() => {
-                    newDatasetError.style.display = 'none';
-                }, 3000);
-                return;
-            }
-            
-            // Check if name contains invalid characters for document ID
-            if (datasetName.includes('/') || datasetName.includes('.') || 
-                datasetName.includes('__') || datasetName.match(/^\s+|\s+$/)) {
-                newDatasetError.style.display = 'block';
-                newDatasetError.textContent = 'Dataset name cannot contain /, ., __, or leading/trailing spaces';
-                setTimeout(() => {
-                    newDatasetError.style.display = 'none';
-                }, 3000);
-                return;
-            }
-            
-            try {
-                // Show loading spinner
-                loadingSpinner.style.display = 'block';
-                
-                // Check if document with this ID already exists
-                const docRef = await db.collection("chat_reports").doc(datasetName).get();
-                
-                if (docRef.exists) {
-                    newDatasetError.style.display = 'block';
-                    newDatasetError.textContent = 'A dataset with this name already exists';
-                    setTimeout(() => {
-                        newDatasetError.style.display = 'none';
-                    }, 3000);
-                    return;
-                }
-                
-                // Create a new document with the dataset name as the ID
-                const timestamp = new Date();
-                await db.collection("chat_reports").doc(datasetName).set({
-                    dataset_name: datasetName,
-                    date_created: timestamp.toISOString(),
-                    content: [],
-                    conversation_id: 'new',
-                    username: 'system',
-                    date_of_report: timestamp.toISOString().split('T')[0]
-                });
-                
-                // Success feedback
-                newDatasetNameInput.value = '';
-                
-                // Show success message
-                const successMsg = document.createElement('div');
-                successMsg.className = 'alert alert-success mt-2';
-                successMsg.innerHTML = `<i class="fas fa-check-circle me-2"></i>Dataset "${datasetName}" created successfully!`;
-                document.querySelector('#newDatasetNameInput').parentNode.after(successMsg);
-                
-                // Remove success message after 3 seconds
-                setTimeout(() => {
-                    successMsg.remove();
-                }, 3000);
-                
-                // Reload the reports to include the new dataset
-                await loadReports();
-                
-            } catch (error) {
-                console.error("Error creating dataset:", error);
-                
-                // Show error message
-                newDatasetError.style.display = 'block';
-                newDatasetError.textContent = `Error creating dataset: ${error.message}`;
-                setTimeout(() => {
-                    newDatasetError.style.display = 'none';
-                }, 5000);
-            } finally {
-                // Hide loading spinner
-                loadingSpinner.style.display = 'none';
-            }
-        }
-
+        
         // Load reports from Firestore
         async function loadReports() {
             try {
@@ -298,7 +192,7 @@
                 // Add a default option
                 const defaultOption = document.createElement('option');
                 defaultOption.value = '';
-                defaultOption.textContent = 'Select a dataset...';
+                defaultOption.textContent = 'Select a report...';
                 defaultOption.disabled = true;
                 defaultOption.selected = true;
                 reportSelect.appendChild(defaultOption);
@@ -306,7 +200,7 @@
                 if (snapshot.empty) {
                     const option = document.createElement('option');
                     option.value = '';
-                    option.textContent = 'No datasets available';
+                    option.textContent = 'No reports available';
                     option.disabled = true;
                     reportSelect.appendChild(option);
                     
@@ -319,17 +213,9 @@
                         const option = document.createElement('option');
                         option.value = doc.id;
                         
-                        // Use the document ID as the dataset name if it was created that way
-                        // Otherwise use the dataset_name field or a default
-                        let displayName;
-                        if (doc.id === data.dataset_name) {
-                            displayName = doc.id;
-                        } else {
-                            displayName = data.dataset_name || 'Unnamed Dataset';
-                            displayName += ` (${doc.id})`;
-                        }
+                        // Format the option text to show document ID
+                        option.textContent = `${doc.id}`;
                         
-                        option.textContent = displayName;
                         reportSelect.appendChild(option);
                     });
                     
@@ -337,8 +223,8 @@
                     viewButton.disabled = false;
                 }
             } catch (error) {
-                console.error("Error loading datasets:", error);
-                alert("Error loading datasets. Please check the console for details.");
+                console.error("Error loading reports:", error);
+                alert("Error loading reports. Please check the console for details.");
                 
                 // Update the status text for errors
                 selectedDatasetStatus.textContent = 'Error loading datasets';
@@ -346,10 +232,30 @@
             }
         }
         
+        // View the selected report
+        async function viewReport() {
+            const reportId = reportSelect.value;
+            
+            if (!reportId) {
+                // Show error message
+                selectError.style.display = 'block';
+                // Add shake animation to the select box
+                reportSelect.classList.add('is-invalid');
+                setTimeout(() => {
+                    reportSelect.classList.remove('is-invalid');
+                }, 1000);
+                return;
+            }
+            
+            // Hide error message if it was shown
+            selectError.style.display = 'none';
+        
+
+        }
+        
         // Event listeners
         viewButton.addEventListener('click', viewReport);
-        createDatasetBtn.addEventListener('click', createNewDataset);
-
+        
         // Enable/disable submit button based on selection
         reportSelect.addEventListener('change', function() {
             viewButton.disabled = !this.value;
@@ -376,17 +282,6 @@
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -146,59 +146,12 @@
             </div>
         </div>
     </div>
-<hr class="my-4">
-<h5>Add New Dataset</h5>
-<div class="mb-3">
-    <label for="newDatasetName" class="form-label">Dataset Name</label>
-    <input type="text" class="form-control" id="newDatasetName" placeholder="Enter dataset name">
-</div>
-<div class="mb-3">
-    <label for="newConversation" class="form-label">Conversation</label>
-    <textarea class="form-control" id="newConversation" rows="4" placeholder="Enter conversation text"></textarea>
-</div>
-<button class="btn btn-success" id="addDatasetButton">
-    <i class="fas fa-plus me-2"></i>Add Dataset
-</button>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     
     <script>
-        // Add new dataset to Firebase
-document.getElementById('addDatasetButton').addEventListener('click', async () => {
-    const nameInput = document.getElementById('newDatasetName');
-    const conversationInput = document.getElementById('newConversation');
-
-    const datasetName = nameInput.value.trim();
-    const conversation = conversationInput.value.trim();
-
-    if (!datasetName || !conversation) {
-        alert("Please fill in both the dataset name and conversation.");
-        return;
-    }
-
-    const newDataset = {
-        datasetName,
-        conversation,
-        username: "anonymous", // or fetch from user input/session
-        date: new Date().toISOString()
-    };
-
-    try {
-        await db.collection("chat_reports").add(newDataset);
-        alert("New dataset added successfully!");
-
-        // Clear form fields
-        nameInput.value = '';
-        conversationInput.value = '';
-
-        // Reload reports
-        loadReports();
-    } catch (error) {
-        console.error("Error adding dataset:", error);
-        alert("Failed to add dataset.");
-    }
-});
         // Firebase configuration - replace with your own Firebase project details
         const firebaseConfig = {
             apiKey: "AIzaSyAMhNFpESlNQ7YyhfCcDHfEN-Pj19rgDdg",
@@ -279,7 +232,20 @@ document.getElementById('addDatasetButton').addEventListener('click', async () =
             }
         }
         
-        
+        // View the selected report
+        async function viewReport() {
+            const reportId = reportSelect.value;
+            
+            if (!reportId) {
+                // Show error message
+                selectError.style.display = 'block';
+                // Add shake animation to the select box
+                reportSelect.classList.add('is-invalid');
+                setTimeout(() => {
+                    reportSelect.classList.remove('is-invalid');
+                }, 1000);
+                return;
+            }
             
             // Hide error message if it was shown
             selectError.style.display = 'none';
@@ -287,7 +253,8 @@ document.getElementById('addDatasetButton').addEventListener('click', async () =
 
         }
         
-        
+        // Event listeners
+        viewButton.addEventListener('click', viewReport);
         
         // Enable/disable submit button based on selection
         reportSelect.addEventListener('change', function() {
@@ -315,7 +282,6 @@ document.getElementById('addDatasetButton').addEventListener('click', async () =
     </script>
 </body>
 </html>
-
 
 
 

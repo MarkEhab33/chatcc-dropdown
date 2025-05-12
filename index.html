@@ -205,14 +205,8 @@
                 }
                 
                 // Create a new document with the dataset name as the ID
-                const timestamp = new Date();
+      
                 await db.collection("chat_reports").doc(datasetName).set({
-                    dataset_name: datasetName,
-                    date_created: timestamp.toISOString(),
-                    content: [],
-                    conversation_id: 'new',
-                    username: 'system',
-                    date_of_report: timestamp.toISOString().split('T')[0]
                 });
                 
                 // Success feedback
@@ -349,6 +343,7 @@
     </script>
 </body>
 </html>
+
 
 
 
